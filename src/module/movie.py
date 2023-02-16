@@ -98,6 +98,7 @@ def get_name_year(html):
         if len(htitle)>0:
             title, year = htitle[0]
     title = title.replace('\u200e', '')
+    year = year.replace('２', '2').replace('１', '1').replace('０', '0')
     return title, year
 
 # 获取电影别名 
@@ -223,7 +224,7 @@ def get_descript(html):
     if len(descripts3)>0:
         return descripts3[0]
 
-# 从缓存或者网上更新页面 
+# 从缓存或者网上更新页面(抛出异常表示禁止访问，IP被限制) 
 def get_page(url, tmp_path, force = False):
     pagehtml = None
     # 是否强制更新文件 
@@ -235,16 +236,37 @@ def get_page(url, tmp_path, force = False):
             pagehtml = fp.read().decode('utf-8')
     else:
         pagehtml = get_html(url)
-        with open(tmp_path, 'wb') as fp:
-            fp.write(pagehtml.encode('utf-8'))
+        # 空页面不记录文件 
+        if pagehtml:
+            with open(tmp_path, 'wb') as fp:
+                fp.write(pagehtml.encode('utf-8'))
+        else:
+            raise Exception('page empty.') 
     # 检测电影是否存在  
     title = re.findall(r'<title>([\w|\W]*?)</title>', pagehtml)
     if len(title)>0:
         if title[0].strip()=='页面不存在' or title[0].strip()=='条目不存在':
             # 不存在的页面需要删除 
             os.remove(tmp_path)
-            return None
-    return pagehtml
+            return None,0
+        elif title[0].strip()=='豆瓣 - 登录跳转页':
+            ids_page = re.findall(r'%2Fsubject%2F(\d+)%2F', pagehtml)
+            if len(ids_page)>0:
+                # 跳转的页面需要删除 
+                os.remove(tmp_path)
+                return None,ids_page[0]
+            return None,0
+        elif title[0].strip()=='禁止访问':
+            # IP被禁的页面需要删除 
+            os.remove(tmp_path)
+            raise Exception('禁止访问.') 
+    else:
+        # 条目不存在的另一种形式 
+        if re.match(r'^<script>var d=\[navigator.platform', pagehtml):
+            # 跳转的页面需要删除 
+            os.remove(tmp_path)
+            return None,0
+    return pagehtml,0
 
 # 电影页面关联的所有相关电影id 
 def get_other_subject_movie(id):
@@ -252,7 +274,7 @@ def get_other_subject_movie(id):
     movie_url = 'https://movie.douban.com/subject/{}/'.format(id)
     # 从文件中读取还是从网上下载 
     cached_file_name = os.path.join(html_tmp_path, str(id)+'.html')
-    pagehtml = get_page(movie_url, cached_file_name)
+    pagehtml,jmp_id = get_page(movie_url, cached_file_name)
     if not pagehtml:
         return None
     subject_list = re.findall(r'/subject/(\d+)/', pagehtml)
@@ -264,9 +286,9 @@ def get_movie_info(id, force = False):
     movie_url = 'https://movie.douban.com/subject/{}/'.format(id)
      # 从文件中读取还是从网上下载 
     cached_file_name = os.path.join(html_tmp_path, str(id)+'.html')
-    pagehtml = get_page(movie_url, cached_file_name, force)
+    pagehtml,jmp_id = get_page(movie_url, cached_file_name, force)
     if not pagehtml:
-        return None
+        return None,jmp_id
     # 初始化数据，以防中间有空数据 
     movie_info = {
         'id': id, 
@@ -305,7 +327,7 @@ def get_movie_info(id, force = False):
     # 影片简介 
     movie_info['descript'] = get_descript(pagehtml)
 
-    return movie_info
+    return movie_info, 0
 
     # http://1.15.242.194:5000/api/v2/search/movie?q=%E7%BE%8E%E4%BA%BA%E9%B1%BC 
 

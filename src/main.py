@@ -14,6 +14,7 @@ from module import sql
 
 movie_obj = sql.movie()
 empty_ids = []
+movie_id_list = []
 
 # 日志打印时间
 def logger(*nums):
@@ -26,13 +27,17 @@ def logger(*nums):
 # 从网上更新指定id电影信息 
 def update_movie(id, force = False):
     global empty_ids
+    global movie_id_list
     try:
-        info = get_movie_info(id, force)
+        info,jmp_id = get_movie_info(id, force)
         if info:
             movie_obj.update_move2sql(info)
             return 1
         else:
             empty_ids.append(id)
+            if jmp_id != 0:
+                logger(str(id) + ' 302 to ' + str(jmp_id))
+                movie_id_list.append(jmp_id)
             return 0
     except:
         return -1
@@ -40,13 +45,17 @@ def update_movie(id, force = False):
 # 从网上更新指定id电影信息 
 def insert_movie(id):
     global empty_ids
+    global movie_id_list
     try:
-        info = get_movie_info(id, True)
+        info,jmp_id = get_movie_info(id, False)
         if info and info['id']!=0:
             movie_obj.save_movie2sql(info)
             return 1
         else:
             empty_ids.append(id)
+            if jmp_id != 0:
+                logger(str(id) + ' 302 to ' + str(jmp_id))
+                movie_id_list.append(jmp_id)
             return 0
     except Exception as e:
         # print(traceback.format_exc())
@@ -74,6 +83,8 @@ def get_next_movie(id):
                 # 不在已查的空列表中 
                 if i not in empty_ids:
                     next_list.append(i)
+    if id in next_list:
+        next_list.remove(id)
     return next_list
 
 # 遍历所有id(容易被封IP) 
@@ -102,6 +113,7 @@ def write_to_file(ids_list, file):
 # 页面关联搜索 
 def spy_movie():
     global empty_ids
+    global movie_id_list
     # 获取数据 
     movie_id_list = read_from_file('movieids.txt')
     empty_ids = read_from_file('emptyids.txt')
@@ -177,8 +189,8 @@ def search_from_json():
 # 仅用评分搜索 
 def search_from_json2():
     # 电影集中在 0、4.8、5.1、5.2、5.3、5.7、6.0、6.7 
-    rating = 39  # 0~100 
-    start_index = 80 # 当前搜索起始条目 
+    rating = 0  # 0~100 
+    start_index = 0 # 当前搜索起始条目 
     # 
     search_count = 0
     while rating<100:
@@ -233,6 +245,6 @@ def spy_from_csv_data():
 if __name__=='__main__':
     # spy_movie() # 从某个点开始爬 
     # spy_from_csv_data() # 使用别人爬的结果进行爬 
-    search_from_json2() # 使用评分爬 
+    # search_from_json2() # 使用评分爬 
     # search_from_json() # 使用评分和年代爬 
     
