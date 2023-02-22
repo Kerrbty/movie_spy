@@ -73,7 +73,7 @@ def get_html(url, retry = 3):
 # 获取电影名 和 年份 
 def get_name_year(html):
     title = None
-    year = 1800 
+    year = '1800'
     # 方法一: 
     title_list = re.findall(r'property="v:itemreviewed">(.*?)</span>', html)
     year_list = re.findall(r'class="year">\((\d+)\)</span>', html)
@@ -97,9 +97,14 @@ def get_name_year(html):
         htitle = re.findall(r'data-name="(.*?)\((\d+)\)"', html)
         if len(htitle)>0:
             title, year = htitle[0]
+    # 方法五：
+    if year == '1800':
+        years_list = re.findall(r'property="v:initialReleaseDate" content="(\d+)">(\d+)</span>', html)
+        if len(years_list)>0:
+            year = years_list[0][0]
     title = title.replace('\u200e', '')
     year = year.replace('２', '2').replace('１', '1').replace('０', '0')
-    return title, year
+    return title, int(year)
 
 # 获取电影别名 
 def get_alias(html):
@@ -369,7 +374,7 @@ def search_by_rating(start_rating, end_rating, start_index):
 def search_by_ratingyear(start_rating, end_rating, start_index, year):
     movie_id_list = []
     search_url = Search_Rating_year_Url.format(start_rating, end_rating, start_index, year, get_next_year(year))
-    print(search_url)
+    logger(search_url)
     pagejson = get_html(search_url)
     if pagejson:
         jvdata = json.loads(pagejson)
@@ -378,15 +383,22 @@ def search_by_ratingyear(start_rating, end_rating, start_index, year):
                 movie_id_list.append(movie_info['id'])
             return True, movie_id_list
         elif 'r' in jvdata:
+            print(sys._getframe().f_code.co_name + "(" + str(sys._getframe().f_lineno) + "): " + str(pagejson))
             return False, []
         else:
+            print(sys._getframe().f_code.co_name + "(" + str(sys._getframe().f_lineno) + "): " + str(pagejson))
             raise Exception("err")
+    else:
+        print(sys._getframe().f_code.co_name + "(" + str(sys._getframe().f_lineno) + "): " + str(pagejson))
+        return False, []
     
 def get_next_year(year):
-    if year < 1930:
+    if year < 1900:
         return year+9
-    elif year < 1950:
+    elif year < 1930:
         return year+4
+    elif year < 1950:
+        return year+2
     elif year < 1980:
         return year+1
     else:
