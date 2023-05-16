@@ -153,21 +153,21 @@ def spy_movie():
 # 用年代和评分同时搜索 
 def search_from_json():
     year = 1880
-    search_count = 0
-    while year < 2023:
-        rating = 0
-        start_index = 0
+    start_index_pre = 0
+    start_rating = 0
+    while year < 2024:
+        rating = start_rating
+        start_index = start_index_pre
+        start_index_pre = 0
+        start_rating = 0
         while rating<100:
+            write_to_file("year:"+str(year)+",rating:"+str(rating)+",index:"+str(start_index), "crtmp.txt")
             # 尽量不然禁用搜索 
-            search_count = search_count + 1
-            if search_count%3 == 0:
-                time.sleep(5*60)
-            else:
-                time.sleep(60)
+            time.sleep(6.5*60)
             # 获取数据 
             status, movie_list = search_by_ratingyear(rating/10, get_next_rating(year, rating)/10, start_index, year)
             if not status:
-                time.sleep(10*60)
+                time.sleep(15*60)
             elif len(movie_list) == 0:
                 rating = get_next_rating(year, rating)
                 start_index = 0
@@ -179,6 +179,7 @@ def search_from_json():
                         # 不在已查的空列表中 
                         if i not in empty_ids:
                             next_list.append(i)
+                logger("count: ", len(next_list))
                 if len(next_list)>0:
                     write_to_file(next_list, 'movieids.txt')
                     spy_movie()
@@ -243,8 +244,8 @@ def spy_from_csv_data():
             spy_movie()
 
 if __name__=='__main__':
-    # spy_movie() # 从某个点开始爬 
+    spy_movie() # 从某个点开始爬 
     # spy_from_csv_data() # 使用别人爬的结果进行爬 
     # search_from_json2() # 使用评分爬 
-    # search_from_json() # 使用评分和年代爬 
+    search_from_json() # 使用评分和年代爬 
     

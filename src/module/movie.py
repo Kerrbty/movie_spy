@@ -6,8 +6,10 @@ import os
 import sys
 import time
 import json
+import urllib3
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
+urllib3.disable_warnings()
 
 http_headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
@@ -49,18 +51,23 @@ def _http_request(url, data = None, post = False):
         http = requests.session()
         http.keep_alive = False
         if post:
-            r = http.post(url, timeout=1, headers=http_headers, data=data)
+            r = http.post(url, timeout=3, headers=http_headers, data=data, verify=False)
         else:
-            r = http.get(url, timeout=1, headers=http_headers)
+            r = http.get(url, timeout=3, headers=http_headers, verify=False)
         # 设置网页编码
         r.encoding = get_encoding(r.text)
+        # 记录cookie
+        if r.cookies:
+            cookie = ''
+            for k,v in r.cookies.items():
+                cookie = cookie + str(k) + '=' + str(v) + ';'
+            http_headers["Cookie"] = cookie
         # 返回页面数据 
         return r.text
     except:
-        # print('error')
         return None
 
-def get_html(url, retry = 3):
+def get_html(url, retry = 5):
     times = 0
     html = None
     while times < retry:
@@ -377,7 +384,12 @@ def search_by_ratingyear(start_rating, end_rating, start_index, year):
     logger(search_url)
     pagejson = get_html(search_url)
     if pagejson:
-        jvdata = json.loads(pagejson)
+        # print(pagejson)
+        try:
+            jvdata = json.loads(pagejson)
+        except:
+            print(pagejson)
+            return False, []
         if 'data' in jvdata:
             for movie_info in jvdata['data']:
                 movie_id_list.append(movie_info['id'])
@@ -395,21 +407,19 @@ def search_by_ratingyear(start_rating, end_rating, start_index, year):
 def get_next_year(year):
     if year < 1900:
         return year+9
-    elif year < 1930:
-        return year+4
-    elif year < 1950:
-        return year+2
     elif year < 1980:
-        return year+1
+        return year+4
+    elif year < 2005:
+        return year+2
     else:
         return year
     
 def get_next_rating(year, rating):
     if year < 1930:
         return rating+50
-    elif year < 1950:
-        return rating+25
     elif year < 1980:
-        return rating+10
+        return rating+40
+    elif year < 2005:
+        return rating+20
     else:
-        return rating+2
+        return rating+10
