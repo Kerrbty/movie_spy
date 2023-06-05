@@ -243,9 +243,23 @@ def spy_from_csv_data():
             write_to_file(next_list, 'movieids.txt')
             spy_movie()
 
+# 1800年的电影如果date里面有日期，则用date里面的年份 
+def Replace_Year():
+    update_idlist = {}
+    for id_year_date in movie_obj.get_movie_year():
+        if id_year_date[2] and int(id_year_date[1]) == 1800:
+            years = re.findall('^\d{4}', id_year_date[2])
+            # print(id_year_date[2], '->', years)
+            if len(years)>0:
+                if int(id_year_date[1]) != int(years[0]):
+                    update_idlist[id_year_date[0]] = int(years[0])
+    for id in update_idlist.keys():
+        movie_obj.update_year(id, update_idlist[id])
+
 if __name__=='__main__':
-    spy_movie() # 从某个点开始爬 
+    # Replace_Year()
+    # spy_movie() # 从某个点开始爬 
     # spy_from_csv_data() # 使用别人爬的结果进行爬 
     # search_from_json2() # 使用评分爬 
-    search_from_json() # 使用评分和年代爬 
+    # search_from_json() # 使用评分和年代爬 
     

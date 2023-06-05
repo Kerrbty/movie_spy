@@ -119,3 +119,13 @@ class movie():
             'id={},'.format(info.get('id'))
             )
         self.mdb.exec_write(sqlstr)
+    
+    # 时间完善 
+    def get_movie_year(self):
+        sqlstr = 'SELECT id,year,date FROM DoubanMovie'
+        return self.mdb.exec_read(sqlstr)
+
+    def update_year(self, id, year):
+        sqlstr = "UPDATE DoubanMovie SET year='{0}' WHERE id='{1}';".format(year, id)
+        # print(sqlstr)
+        self.mdb.exec_write(sqlstr)
